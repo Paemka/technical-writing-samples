@@ -1,0 +1,30 @@
+// Find the log files to collect.
+local.file_match "orders" {
+  path_targets = [{"__path__" = "/var/log/orders/*.log", "job" = "orders-app"}]
+}
+
+// Read new lines from each matched file.
+loki.source.file "orders" {
+  targets    = local.file_match.orders.targets
+  forward_to = [loki.process.orders.receiver]
+}
+
+// Parse each JSON line and turn the level field into a label.
+loki.process "orders" {
+  stage.json {
+    expressions = {level = ""}
+  }
+
+  stage.labels {
+    values = {level = ""}
+  }
+
+  forward_to = [loki.write.local.receiver]
+}
+
+// Send the processed log lines to Loki.
+loki.write "local" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}
